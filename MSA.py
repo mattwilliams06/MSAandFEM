@@ -1,9 +1,9 @@
 import numpy as np
 
 class MSA_truss:
-    ''' This is a class of methods to perform Matrix Structural Analysis on 2D trusses. The limitations are the truss
-    contain only pin-type joints, and that each member has joints only at the ends. The user must specify inputs in a
-    particular way, which will be spelled out in the docstring for each method.
+    ''' This is a class of methods to perform Matrix Structural Analysis on 2D trusses using the direct stiffness method. 
+    The limitations are the truss contain only pin-type joints, and that each member has joints only at the ends. 
+    The user must specify inputs in a particular way, which will be described in this doctring.
 
     Inputs
     ------
@@ -31,6 +31,31 @@ class MSA_truss:
     for forces in the x and y directions. For example, a truss with 3 nodes that is pinned at both ends and has a downward load of 
     9000 kN applied at node 3 will have a P vector of ['unk', 'unk', 0, -9000, 'unk', 'unk'].
 
+    Methods
+    -------
+
+    This class contains the following methods:
+
+    Ke_truss: generates a list of element stiffness matrices.
+
+    KG: generates the global stiffness matrix by assembling all element stiffness matrices in the global coordinate system.
+    
+    partition: partitions the global stiffness matrix and the force and displacement vectors based on the locations of the
+    'unk' entries in both the force and displacement vectors.
+
+    solve: solves the system for the unknown forces and displacements. This is the only method that needs to be called. All other
+    methods are implemented when calling solve.
+
+    Returns
+    -------
+
+    The solve method returns the array of unknown displacements and the array of unknown forces. The entries in each array are
+    in order of node numbering. For example, if there were unknown displacements at degrees of freedom 3, 4, 7, and 8, the returned
+    array will be the displacements of those DOFs, respectively.
+
+    Negative displacements are displacements in the negative x and y-directions (left and down). Positive forces indicate an 
+    element is in tension, while negative forces indicate the member is in compression.
+
     This implementation of MSA is based on the methodology found in _An Introduction to Matrix Structural Analysis and
     Finite Element Methods_ by Jean Provost and Serguei Bagrianski.
 
@@ -40,12 +65,12 @@ class MSA_truss:
         self.coords = coords
         self.ien = ien.astype(np.int8)
         self.props = props
-        self.u = u.astype(np.float32)
-        self.P = P.astype(np.float32)
+        self.u = u
+        self.P = P
         self.n_nodes = len(self.coords)
         self.n_elements = len(self.ien)
-        self.ind = np.zeros((n_nodes, 2), dtype=np.int8)
-        self.ied = np.zeros((n_elements, 2, 2), dtype=np.int8)
+        self.ind = np.zeros((self.n_nodes, 2), dtype=np.int8)
+        self.ied = np.zeros((self.n_elements, 2, 2), dtype=np.int8)
     # Create indices for the degrees of freedom, two per node
     # Also create an matrix for the degree of freedom indices for each element
 
@@ -68,26 +93,29 @@ class MSA_truss:
             self.ied[i, 0] = self.ind[self.ien[i, 0]]
             self.ied[i, 1] = self.ind[self.ien[i, 1]]
 
-        nx = (self.coords[self.ien[elem_idx, 1], 0] - self.coords[self.ien[elem_idx, 0], 0])
-        ny = (self.coords[self.ien[elem_idx, 1], 1] - self.coords[self.ien[elem_idx, 0], 1])
-        #print(nx, ny)
-        L = np.linalg.norm([nx, ny])
-        #print(L)
-        T = np.zeros((2, 4), dtype=np.float32)
-        T[0, :2] = [nx, ny] / L
-        T[1, 2:] = [nx, ny] / L
-        #print(T)
-        E = self.prop[elem_idx, 0]
-        A = self.prop[elem_idx, 1]
+        Ke_all = []
+        for elem_idx in range(self.n_elements):
+            nx = (self.coords[self.ien[elem_idx, 1], 0] - self.coords[self.ien[elem_idx, 0], 0])
+            ny = (self.coords[self.ien[elem_idx, 1], 1] - self.coords[self.ien[elem_idx, 0], 1])
+            #print(nx, ny)
+            L = np.linalg.norm([nx, ny])
+            #print(L)
+            T = np.zeros((2, 4), dtype=np.float32)
+            T[0, :2] = [nx, ny] / L
+            T[1, 2:] = [nx, ny] / L
+            #print(T)
+            E = self.props[elem_idx, 0]
+            A = self.props[elem_idx, 1]
             
-        # Local stiffness matrix
-        k = np.array([[1., -1.], [-1., 1.]])
-        k *= E*A/L
+            # Local stiffness matrix
+            k = np.array([[1., -1.], [-1., 1.]])
+            k *= E*A/L
             
-        # Global element stiffness matrix
-        Ke = T.T @ k @ T
+            # Global element stiffness matrix
+            Ke = T.T @ k @ T
+            Ke_all.append(Ke)
             
-        return Ke
+        return Ke_all
 
 
     def KG(self):
@@ -97,15 +125,17 @@ class MSA_truss:
     of degrees of freedom per element (4 in this case).
     '''
         Ke = self.Ke_truss()
-        self.KG = np.zeros((self.n_nodes * 2, self.n_nodes * 2), dtype=np.float32)
+        #print('Ke: ', Ke)
+        Kg = np.zeros((self.n_nodes * 2, self.n_nodes * 2), dtype=np.float32)
+        #print('Kg initialized: ', Kg)
         # assigning the entries of Ke to the locations in KG corresponding to the DOF at each
         # node in the element.
         for element in range(self.n_elements):
             for row in range(4):
                 for col in range(4):
                     idx = self.ied[element].flatten()
-                    KG[idx[row], idx[col]] += Ke[element][row, col]
-        return KG
+                    Kg[idx[row], idx[col]] += Ke[element][row, col]
+        return Kg
 
 
     def partition(self):
@@ -113,17 +143,17 @@ class MSA_truss:
         Degrees of freedom containing unknown forces or displacements should contain the string "unk"
         '''
         # Indices for natural and essential boundary conditions, respectively.
-        KG = self.KG()
-        U_idx = P != 'unk'
-        S_idx = P == 'unk'
+        Kg = self.KG()
+        U_idx = self.P != 'unk'
+        S_idx = self.P == 'unk'
     
-        Pu = P[U_idx]
-        du = u[U_idx]
-        ds = u[S_idx]
-        Kuu = KG[np.ix_(U_idx, U_idx)]
-        Kus = KG[np.ix_(U_idx, S_idx)]
-        Ksu = KG[np.ix_(S_idx, U_idx)]
-        Kss = KG[np.ix_(S_idx, S_idx)]
+        Pu = self.P[U_idx].astype(np.float32)
+        du = self.u[U_idx]
+        ds = self.u[S_idx].astype(np.float32)
+        Kuu = Kg[np.ix_(U_idx, U_idx)]
+        Kus = Kg[np.ix_(U_idx, S_idx)]
+        Ksu = Kg[np.ix_(S_idx, U_idx)]
+        Kss = Kg[np.ix_(S_idx, S_idx)]
     
         return Pu, ds, Kuu, Kus, Ksu, Kss
 
@@ -135,6 +165,3 @@ class MSA_truss:
 
         return du, Rs
 
-
-# if __name__ == '__main__':
-#     import numpy as np
