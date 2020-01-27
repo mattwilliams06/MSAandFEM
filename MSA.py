@@ -34,5 +34,21 @@ class MSA:
 
     Author: Matt Williams, matthew.j.williams@protonmail.com.
     '''
+    import numpy as np
+
+    def __init__(self, coords, ien, props, u, P):
+    	self.coords = coords
+    	self.ien = ien.astype(np.int8)
+    	self.props = props
+    	self.u = u.astype(np.float32)
+    	self.P = P.astype(np.float32)
+
+
+    # Create indices for the degrees of freedom , two per node
+    self.n_nodes = len(self.coords)
+    self.ind = np.zeros((n_nodes, 2))
+    for i in range(self.n_nodes):
+    	self.ind[i, 0] = i * 2
+    	self.ind[i, 1] = i * 2 + 1
 
 
