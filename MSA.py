@@ -1,4 +1,6 @@
-class MSA:
+import numpy as np
+
+class MSA_truss:
     ''' This is a class of methods to perform Matrix Structural Analysis on 2D trusses. The limitations are the truss
     contain only pin-type joints, and that each member has joints only at the ends. The user must specify inputs in a
     particular way, which will be spelled out in the docstring for each method.
@@ -34,21 +36,105 @@ class MSA:
 
     Author: Matt Williams, matthew.j.williams@protonmail.com.
     '''
-    import numpy as np
-
     def __init__(self, coords, ien, props, u, P):
-    	self.coords = coords
-    	self.ien = ien.astype(np.int8)
-    	self.props = props
-    	self.u = u.astype(np.float32)
-    	self.P = P.astype(np.float32)
+        self.coords = coords
+        self.ien = ien.astype(np.int8)
+        self.props = props
+        self.u = u.astype(np.float32)
+        self.P = P.astype(np.float32)
+        self.n_nodes = len(self.coords)
+        self.n_elements = len(self.ien)
+        self.ind = np.zeros((n_nodes, 2), dtype=np.int8)
+        self.ied = np.zeros((n_elements, 2, 2), dtype=np.int8)
+    # Create indices for the degrees of freedom, two per node
+    # Also create an matrix for the degree of freedom indices for each element
+
+    def Ke_truss(self):
+        ''' Generate the truss element stiffness matrix.
+        Inputs
+        ------
+        
+        xe: list of component-lengths for truss element. For example, a 5m member inclined at 32.9 deg will have
+        xe elements of 4m and 3m. The same member inclined at zero degrees will have 5m and 0m.
+        prop: list of properties [Young's modulus, cross-sectional area]
+        '''
+        # elem_idx -= 1 # adjusting for element numberings that begin with 1
+        for elem_idx in range(self.n_elements):
+            for i in range(self.n_nodes):
+                self.ind[i, 0] = i * 2
+                self.ind[i, 1] = i * 2 + 1
+        
+        for i in range(self.n_elements):
+            self.ied[i, 0] = self.ind[self.ien[i, 0]]
+            self.ied[i, 1] = self.ind[self.ien[i, 1]]
+
+        nx = (self.coords[self.ien[elem_idx, 1], 0] - self.coords[self.ien[elem_idx, 0], 0])
+        ny = (self.coords[self.ien[elem_idx, 1], 1] - self.coords[self.ien[elem_idx, 0], 1])
+        #print(nx, ny)
+        L = np.linalg.norm([nx, ny])
+        #print(L)
+        T = np.zeros((2, 4), dtype=np.float32)
+        T[0, :2] = [nx, ny] / L
+        T[1, 2:] = [nx, ny] / L
+        #print(T)
+        E = self.prop[elem_idx, 0]
+        A = self.prop[elem_idx, 1]
+            
+        # Local stiffness matrix
+        k = np.array([[1., -1.], [-1., 1.]])
+        k *= E*A/L
+            
+        # Global element stiffness matrix
+        Ke = T.T @ k @ T
+            
+        return Ke
 
 
-    # Create indices for the degrees of freedom , two per node
-    self.n_nodes = len(self.coords)
-    self.ind = np.zeros((n_nodes, 2))
-    for i in range(self.n_nodes):
-    	self.ind[i, 0] = i * 2
-    	self.ind[i, 1] = i * 2 + 1
+    def KG(self):
+        ''' Assemble the global stiffness matrix from a tensor of the element stiffness matrices.
+    For this 2D code, each element is associated with 2 nodes at each end. The tensor of 
+    element stiffness matrices is of shape (num_elements, dof, dof) where dof is the number
+    of degrees of freedom per element (4 in this case).
+    '''
+        Ke = self.Ke_truss()
+        self.KG = np.zeros((self.n_nodes * 2, self.n_nodes * 2), dtype=np.float32)
+        # assigning the entries of Ke to the locations in KG corresponding to the DOF at each
+        # node in the element.
+        for element in range(self.n_elements):
+            for row in range(4):
+                for col in range(4):
+                    idx = self.ied[element].flatten()
+                    KG[idx[row], idx[col]] += Ke[element][row, col]
+        return KG
 
 
+    def partition(self):
+        ''' Partition the stiffness matrix based on the DOF locations of the known forces. 
+        Degrees of freedom containing unknown forces or displacements should contain the string "unk"
+        '''
+        # Indices for natural and essential boundary conditions, respectively.
+        KG = self.KG()
+        U_idx = P != 'unk'
+        S_idx = P == 'unk'
+    
+        Pu = P[U_idx]
+        du = u[U_idx]
+        ds = u[S_idx]
+        Kuu = KG[np.ix_(U_idx, U_idx)]
+        Kus = KG[np.ix_(U_idx, S_idx)]
+        Ksu = KG[np.ix_(S_idx, U_idx)]
+        Kss = KG[np.ix_(S_idx, S_idx)]
+    
+        return Pu, ds, Kuu, Kus, Ksu, Kss
+
+
+    def solve(self):
+        Pu, ds, Kuu, Kus, Ksu, Kss = self.partition()
+        du = np.linalg.inv(Kuu) @ (Pu - Kus @ ds)
+        Rs = Ksu @ du + Kss @ ds
+
+        return du, Rs
+
+
+# if __name__ == '__main__':
+#     import numpy as np
