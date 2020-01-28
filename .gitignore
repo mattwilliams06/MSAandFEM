@@ -107,4 +107,9 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+# Add actual files I don't want in GitHub here
+GlobalStiffness.ipynb
+TrussElements.ipynb
+TestingNotebook.ipynb
+
 # End of https://www.gitignore.io/api/python
