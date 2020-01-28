@@ -107,6 +107,8 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+.DS_Store
+
 # Add actual files I don't want in GitHub here
 GlobalStiffness.ipynb
 TrussElements.ipynb
