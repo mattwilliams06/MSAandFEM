@@ -4,21 +4,23 @@ This repository contains msa.py, which implements Matrix Structural Analysis usi
 
 ## Example Demonstrating the Inputs
 
-To demonstrate the required inputs, consider the ![truss shown here](https://github.com/mattwilliams06/MSAandFEM/blob/master/truss1.png) The truss has 5 elements and 4 nodes/joints. The truss is also pinned in two locations. Indices will start at zero, as is the convention in computer programming languages. Numbering the nodes, node 0 is the location of the pinned node in the lower left corner, node 1 is the node at the directly to the right from node 0 (across the bottom horizontal member), node 2 is the node directly upward from node 1, and node 3 is the pinned node at the upper right corner of the truss. We can now develop the coordinates array from this information. Using a 2D array where each row is a node, the coordinates array will be
+To demonstrate the required inputs, consider the ![truss shown here](https://github.com/mattwilliams06/MSAandFEM/blob/master/Truss1.jpg) The truss has 5 elements and 4 nodes/joints. The truss is pinned in two locations. Node/joint indices are shown in red, while element indices are shown in green. There are prescribed loads and displacements, which will be addressed further down this document.
+
+Considering each node's location in a cartesian coordinate system, placing the origin at node 0, the coordinates array can be assembled. In millimeters, this array is:
 
 ```python
-np.array([[0., 0.], [4., 0.], [4., 3.], [8., 3.]])
+np.array([[0., 0.], [4000., 0.], [4000., 3000.], [8000., 3000.]])
 ``` 
 
-if working in meters.
+Each element's coordinates are stored along axis 0.
 
-Numbering the truss elements, element 0 is the lower horizontal bar, element 1 is the sloped element on the left, element 2 is the vertical element, element 3 is the sloped element on the right, and element 4 is the upper horizontal element. The index of element nodes (IEN) is an array containing the node numbers for each element. We can see that element zero is attached to nodes 0 and 1, etc. In this case, the IEN will be 
+The index of element nodes (IEN) matrix can also be constructed, indicating which nodes are associated with each element. The ordering of the nodes for a particular element does not affect the solution. This array will be used to compute the element lengths and the direction cosines. The IEN matrix for the example truss is shown below.
 
 ```python
 np.array([[0, 1], [0, 2], [1, 2], [1, 3], [2, 3]])
 ```
 
-The program will automatically assign degree of freedom indices to each node based on the node number. Node 0 will have degrees of freedom 0 and 1 for the x and y-directions respectively. Node 1 will have DOFs 2 and 3, and so on.
+The program will automatically assign degree of freedom indices to each node based on the node number. Node 0 will have degrees of freedom 0 and 1 for the x and y-directions respectively. Node 1 will have DOFs 2 and 3, and so on. Therefore, element 0 is associated with degrees of freedom 0, 1, 2, and 3. Element 1 has degrees of freedom 0, 1, 4, and 5, and so on.
 
 For the properties array, each row contains the Young's Modulus and cross-sectional area for the associated element. If each element has a Young's Modulus of 200,000 MPa, and taking the cross-sectional areas from the picture, the property array will be 
 
@@ -37,5 +39,7 @@ The force array is similar. Reaction forces will be unknown typically, and the p
 ```python
 np.array(['unk', 'unk', 0., 0., 0., -9000., 'unk', 'unk'])
 ```
+
+It should be noted there are no locations where both the displacement and the force are unknown. Generally, unless a problem is very contrived, wherever either the displacement or the force is unknown, the other will be prescribed. 
 
 These vectors serve as the input to MSA_truss when first creating an instance of the class. Then, the solve method only needs to be called. The output will be the unkown values that were solved for, in order of DOF index number.
