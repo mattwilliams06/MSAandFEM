@@ -1,8 +1,10 @@
 import numpy as np
 
 class MSA_truss:
-    ''' This is a class of methods to perform Matrix Structural Analysis on 2D trusses using the direct stiffness method. 
-    The limitations are the truss contain only pin-type joints, and that each member has joints only at the ends. 
+    ''' This is a class of methods to perform Matrix Structural Analysis on 2D trusses using the direct stiffness method.
+
+
+    The limitations of the algorithm are that the truss contain only pin-type joints, and that each member has joints only at the ends. 
     The user must specify inputs in a particular way, which will be described in this doctring.
 
     Inputs
@@ -61,6 +63,7 @@ class MSA_truss:
 
     Author: Matt Williams, matthew.j.williams@protonmail.com.
     '''
+
     def __init__(self, coords, ien, props, u, P):
         self.coords = coords
         self.ien = ien.astype(np.int8)
@@ -75,20 +78,15 @@ class MSA_truss:
     # Also create an matrix for the degree of freedom indices for each element
 
     def Ke_truss(self):
-        ''' Generate the truss element stiffness matrix.
-        Inputs
-        ------
+        ''' Generate the element stiffness matrix for each element in the truss.'''
         
-        xe: list of component-lengths for truss element. For example, a 5m member inclined at 32.9 deg will have
-        xe elements of 4m and 3m. The same member inclined at zero degrees will have 5m and 0m.
-        prop: list of properties [Young's modulus, cross-sectional area]
-        '''
-        # elem_idx -= 1 # adjusting for element numberings that begin with 1
+        # Generate degree of freedom indices based on the node index.
         for elem_idx in range(self.n_elements):
             for i in range(self.n_nodes):
                 self.ind[i, 0] = i * 2
                 self.ind[i, 1] = i * 2 + 1
         
+        # Populate the degree of freedom indices associated with each element
         for i in range(self.n_elements):
             self.ied[i, 0] = self.ind[self.ien[i, 0]]
             self.ied[i, 1] = self.ind[self.ien[i, 1]]
@@ -97,13 +95,14 @@ class MSA_truss:
         for elem_idx in range(self.n_elements):
             nx = (self.coords[self.ien[elem_idx, 1], 0] - self.coords[self.ien[elem_idx, 0], 0])
             ny = (self.coords[self.ien[elem_idx, 1], 1] - self.coords[self.ien[elem_idx, 0], 1])
-            #print(nx, ny)
             L = np.linalg.norm([nx, ny])
-            #print(L)
+            
+            # Transformation matrix
             T = np.zeros((2, 4), dtype=np.float32)
             T[0, :2] = [nx, ny] / L
             T[1, 2:] = [nx, ny] / L
-            #print(T)
+
+            # Material properties
             E = self.props[elem_idx, 0]
             A = self.props[elem_idx, 1]
             
@@ -120,14 +119,15 @@ class MSA_truss:
 
     def KG(self):
         ''' Assemble the global stiffness matrix from a tensor of the element stiffness matrices.
-    For this 2D code, each element is associated with 2 nodes at each end. The tensor of 
-    element stiffness matrices is of shape (num_elements, dof, dof) where dof is the number
-    of degrees of freedom per element (4 in this case).
-    '''
+        For this 2D code, each element is associated with 2 nodes at each end. The tensor of 
+        element stiffness matrices is of shape (num_elements, dof, dof) where dof is the number
+        of degrees of freedom per element (4 in this case).
+        '''
+        
+        # Call Ke_truss to return a list of all global element stiffness matrices
         Ke = self.Ke_truss()
-        #print('Ke: ', Ke)
+        
         Kg = np.zeros((self.n_nodes * 2, self.n_nodes * 2), dtype=np.float32)
-        #print('Kg initialized: ', Kg)
         # assigning the entries of Ke to the locations in KG corresponding to the DOF at each
         # node in the element.
         for element in range(self.n_elements):
