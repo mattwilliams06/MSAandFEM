@@ -113,5 +113,6 @@ dmypy.json
 GlobalStiffness.ipynb
 TrussElements.ipynb
 TestingNotebook.ipynb
+.ipynb_checkpoints/
 
 # End of https://www.gitignore.io/api/python
