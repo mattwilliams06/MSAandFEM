@@ -4,7 +4,9 @@ This repository contains msa.py, which implements Matrix Structural Analysis usi
 
 ## Example Demonstrating the Inputs
 
-To demonstrate the required inputs, consider the ![truss shown here](https://github.com/mattwilliams06/MSAandFEM/blob/master/Truss1.jpg) The truss has 5 elements and 4 nodes/joints. The truss is pinned in two locations. Node/joint indices are shown in red, while element indices are shown in green. There are prescribed loads and displacements, which will be addressed further down this document.
+To demonstrate the required inputs, consider the ![truss shown here](https://github.com/mattwilliams06/MSAandFEM/blob/master/Truss1.jpg) 
+
+The truss has 5 elements and 4 nodes/joints. The truss is pinned in two locations. Node/joint indices are shown in red, while element indices are shown in green. There are prescribed loads and displacements, which will be addressed further down this document.
 
 Considering each node's location in a cartesian coordinate system, placing the origin at node 0, the coordinates array can be assembled. In millimeters, this array is:
 
