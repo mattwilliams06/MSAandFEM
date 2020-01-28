@@ -7,7 +7,7 @@ This repository contains msa.py, which implements Matrix Structural Analysis usi
 To demonstrate the required inputs, consider the ![truss shown here](https://github.com/mattwilliams06/MSAandFEM/blob/master/truss1.png) The truss has 5 elements and 4 nodes/joints. The truss is also pinned in two locations. Indices will start at zero, as is the convention in computer programming languages. Numbering the nodes, node 0 is the location of the pinned node in the lower left corner, node 1 is the node at the directly to the right from node 0 (across the bottom horizontal member), node 2 is the node directly upward from node 1, and node 3 is the pinned node at the upper right corner of the truss. We can now develop the coordinates array from this information. Using a 2D array where each row is a node, the coordinates array will be
 
 ```python
-np.array([[0, 0], [4, 0], [4, 3], [8, 3]])
+np.array([[0., 0.], [4., 0.], [4., 3.], [8., 3.]])
 ``` 
 
 if working in meters.
@@ -29,7 +29,7 @@ np.array([[200000., 100.], [200000., 200.], [200000., 100.], [200000., 200.], [2
 The displacements array will have known entries due to prescribed displacements and essential boudary conditions. There needs to be one entry per degree of freedom. If a DOF has an unknown displacement, the entry should be the string 'unk'. From the diagram, we can see that node 0 has a prescribed displacement of 4 mm in the negative direction for DOF 0. Due to the boundary conditions, DOFs 1, 6, and 7 will have 0 displacement. All others are unknown. The displacement array is therefore 
 
 ```python
-np.array([-4, 0, 'unk', 'unk', 'unk', 'unk', 0, 0])
+np.array([-4., 0., 'unk', 'unk', 'unk', 'unk', 0., 0.])
 ```
 
 The force array is similar. Reaction forces will be unknown typically, and the prescribed forces at various nodes will be known. There is one prescribed force in the diagram at node 2 in the negative y-direction (negative DOF 5.). There are no applied loads at DOFs 2, 3, or 4. DOFs 0, 1, 6, and 7 will be the unknown reaction forces. The force vector is therefore 
