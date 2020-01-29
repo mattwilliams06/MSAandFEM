@@ -45,3 +45,6 @@ np.array(['unk', 'unk', 0., 0., 0., -9000., 'unk', 'unk'])
 It should be noted there are no locations where both the displacement and the force are unknown. Generally, unless a problem is very contrived, wherever either the displacement or the force is unknown, the other will be prescribed. 
 
 These vectors serve as the input to MSA_truss when first creating an instance of the class. Then, the solve method only needs to be called. The output will be the unkown values that were solved for, in order of DOF index number.
+
+## Pytest Test Case
+A test case for unit testing on the entire class was developed in test_solve.py. It is a two-member truss with elements of unit length, with unit properties and a unit load applied. 
