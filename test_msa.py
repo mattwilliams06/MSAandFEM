@@ -14,4 +14,3 @@ def test_solve():
     u_solved, P_solved = mymsa.solve() 
     assert_allclose(u_solved, [1.0, -3.828427])
     assert_allclose(P_solved, [-1.       ,  0.       ,  0.9999999,  0.9999999])
-    #assert u_solved == 

@@ -48,3 +48,5 @@ These vectors serve as the input to MSA_truss when first creating an instance of
 
 ## Pytest Test Case
 A test case for unit testing on the entire class was developed in test_solve.py. It is a two-member truss with elements of unit length, with unit properties and a unit load applied. 
+
+Running pytest: With the current project structure, pytest works best when running the command ```python -m pytest test_msa.py``` instead of the standard ```pytest test_msa.py```. The latter tends to result in a ```ModuleImportError``` on the call to import the msa module.
